@@ -1,0 +1,19 @@
+{
+  "name": "@kyve/logic",
+  "version": "0.0.0",
+  "repository": "https://github.com/KYVENetwork/logic",
+  "author": "John Letey <john@kyve.network>, Fabian Riewe <fabian@kyve.network>",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "fmt": "prettier --write ."
+  },
+  "dependencies": {
+    "arweave": "^1.10.11",
+    "smartweave": "^0.4.27"
+  },
+  "devDependencies": {
+    "prettier": "^2.2.1",
+    "typescript": "^4.2.2"
+  }
+}
