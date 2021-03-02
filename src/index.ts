@@ -16,7 +16,7 @@ export default class KYVE {
   public validateFunc: Function;
 
   public pool?: Object;
-  public poolName?: string;
+  public poolName: string;
 
   private keyfile: JWKInterface;
 
@@ -31,22 +31,21 @@ export default class KYVE {
     this.uploadFunc = uploadFunc;
     this.validateFunc = validateFunc;
 
+    this.poolName = options.pool;
     this.keyfile = options.jwk;
-
-    readContract(client, CONTRACT).then((state) => {
-      if (options.pool in state.pools) {
-        this.pool = state.pools[options.pool];
-        this.poolName = options.pool;
-      } else {
-        throw Error(
-          `Pool with name ${options.pool} not found in KYVE contract.`
-        );
-      }
-    });
   }
 
   public async run() {
     const address = await client.wallets.getAddress(this.keyfile);
+
+    const state = await readContract(client, CONTRACT);
+    if (this.poolName in state.pools) {
+      this.pool = state.pools[this.poolName];
+    } else {
+      throw Error(
+        `No pool with name "${this.poolName}" was found in the KYVE contract.`
+      );
+    }
 
     // @ts-ignore
     // TODO: Write interface for contract.
