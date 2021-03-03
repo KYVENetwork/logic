@@ -17,7 +17,7 @@ const bundles = ArweaveBundles({
   deepHash,
 });
 
-export const CONTRACT = "yT-ElkFqDEawZakL58ztJ_JzST1PCruc5QBLptAfqAs";
+export const CONTRACT = "1htMi-6Ue7jfxERuU4PKDulYpFMKwmDE5oZTgO_BEAI";
 
 export default class KYVE {
   public uploadFunc: Function;
@@ -95,8 +95,7 @@ export default class KYVE {
               { name: "Application", value: "KYVE - DEV" },
               { name: "Pool", value: this.poolName },
               // @ts-ignore
-              // TODO: Change to "Architecture"
-              { name: "Chain", value: this.pool!.chain },
+              { name: "Architecture", value: this.pool!.architecture },
               ...(entry.tags || []),
             ],
           },
