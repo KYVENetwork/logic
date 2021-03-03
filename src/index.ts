@@ -112,12 +112,15 @@ export default class KYVE {
 
       const items = [];
       for (const block of blocks) {
-        const txs: { name: string; value: string }[] = [];
-        for (const tx of getValue(block, this.keys.transactionKey)) {
-          txs.push({
-            name: "Transaction",
-            value: getValue(tx, this.keys.transactionHashKey),
-          });
+        const txs = getValue(block, this.keys.transactionKey);
+        const txTags: { name: string; value: string }[] = [];
+        if (txs) {
+          for (const tx of txs) {
+            txTags.push({
+              name: "Transaction",
+              value: getValue(tx, this.keys.transactionHashKey),
+            });
+          }
         }
 
         const item = await bundles.createData(
@@ -130,7 +133,7 @@ export default class KYVE {
               { name: "Chain", value: this.pool!.chain },
               { name: "Block", value: getValue(block, this.keys.hashKey) },
               { name: "Height", value: getValue(block, this.keys.heightKey) },
-              ...txs,
+              ...txTags,
             ],
           },
           this.keyfile
