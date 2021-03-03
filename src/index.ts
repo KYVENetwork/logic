@@ -17,50 +17,26 @@ const bundles = ArweaveBundles({
   deepHash,
 });
 
-// From: https://stackoverflow.com/questions/6491463/accessing-nested-javascript-objects-and-arrays-by-string-path
-const getValue = (obj: any, key: string): any => {
-  key = key.replace(/\[(\w+)\]/g, ".$1"); // convert indexes to properties
-  key = key.replace(/^\./, ""); // strip a leading dot
-
-  const keys = key.split(".");
-  for (let i = 0; i < keys.length; ++i) {
-    if (keys[i] in obj) {
-      obj = obj[keys[i]];
-    } else {
-      return;
-    }
-  }
-
-  return obj;
-};
-
-interface IndexKeys {
-  transactionKey: string;
-  transactionHashKey: string;
-  hashKey: string;
-  heightKey: string;
-}
-
 export const CONTRACT = "yT-ElkFqDEawZakL58ztJ_JzST1PCruc5QBLptAfqAs";
 
 export default class KYVE {
   public uploadFunc: Function;
   public validateFunc: Function;
-  private blocks: any[] = [];
+  private buffer: {
+    data: any;
+    tags?: { name: string; value: string }[];
+  }[] = [];
 
   public pool?: Object;
   public poolName: string;
 
   private keyfile: JWKInterface;
 
-  public keys: IndexKeys;
-
   constructor(
     uploadFunc: Function,
     validateFunc: Function,
     options: {
       pool: string;
-      keys: IndexKeys;
       jwk: JWKInterface;
     }
   ) {
@@ -68,7 +44,6 @@ export default class KYVE {
     this.validateFunc = validateFunc;
 
     this.poolName = options.pool;
-    this.keys = options.keys;
     this.keyfile = options.jwk;
   }
 
@@ -96,8 +71,9 @@ export default class KYVE {
   private async uploader() {
     const node = new Observable((subscribe) => this.uploadFunc(subscribe));
 
-    node.subscribe((block) => {
-      this.blocks.push(block);
+    node.subscribe((data) => {
+      // @ts-ignore
+      this.buffer.push(data);
       this.bundleAndUpload();
     });
   }
@@ -106,34 +82,22 @@ export default class KYVE {
     // @ts-ignore
     const bundleSize = this.pool!.bundleSize;
 
-    if (this.blocks.length >= bundleSize) {
-      const blocks = this.blocks;
-      this.blocks = [];
+    if (this.buffer.length >= bundleSize) {
+      const buffer = this.buffer;
+      this.buffer = [];
 
       const items = [];
-      for (const block of blocks) {
-        const txs = getValue(block, this.keys.transactionKey);
-        const txTags: { name: string; value: string }[] = [];
-        if (txs) {
-          for (const tx of txs) {
-            txTags.push({
-              name: "Transaction",
-              value: getValue(tx, this.keys.transactionHashKey),
-            });
-          }
-        }
-
+      for (const entry of buffer) {
         const item = await bundles.createData(
           {
-            data: JSON.stringify(block),
+            data: JSON.stringify(entry.data),
             tags: [
               { name: "Application", value: "KYVE - DEV" },
               { name: "Pool", value: this.poolName },
               // @ts-ignore
+              // TODO: Change to "Architecture"
               { name: "Chain", value: this.pool!.chain },
-              { name: "Block", value: getValue(block, this.keys.hashKey) },
-              { name: "Height", value: getValue(block, this.keys.heightKey) },
-              ...txTags,
+              ...(entry.tags || []),
             ],
           },
           this.keyfile
