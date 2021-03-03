@@ -2,7 +2,7 @@ import Arweave from "arweave";
 import ArweaveBundles from "arweave-bundles";
 import deepHash from "arweave/node/lib/deepHash";
 import { JWKInterface } from "arweave/node/lib/wallet";
-import { readContract } from "smartweave";
+import { readContract, interactWrite } from "smartweave";
 import { Observable } from "rxjs";
 
 const client = new Arweave({
@@ -62,13 +62,13 @@ export default class KYVE {
     // @ts-ignore
     // TODO: Write interface for contract.
     if (address === this.pool!.uploader) {
-      await this.uploader();
+      this.uploader();
     } else {
-      await this.validator();
+      this.validator();
     }
   }
 
-  private async uploader() {
+  private uploader() {
     const node = new Observable((subscribe) => this.uploadFunc(subscribe));
 
     node.subscribe((data) => {
@@ -120,16 +120,23 @@ export default class KYVE {
     }
   }
 
-  private async validator() {
+  private validator() {
     const node = new Observable((subscribe) => this.validateFunc(subscribe));
 
-    node.subscribe(async (res) => {
-      // @ts-ignore
-      if (res.valid) {
+    node.subscribe((valid) => {
+      if (valid) {
         // TODO: Log.
       } else {
-        // TODO: Raise concern in DAO.
+        this.raiseConcern();
       }
     });
+  }
+
+  private async raiseConcern() {
+    const id = await interactWrite(client, this.keyfile, CONTRACT, {
+      function: "deny",
+      pool: this.poolName,
+    });
+    // TODO: Log.
   }
 }
