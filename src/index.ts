@@ -27,6 +27,7 @@ export default class KYVE {
     tags?: { name: string; value: string }[];
   }[] = [];
 
+  // TODO: Write interface for contract.
   public pool?: Object;
   public poolName: string;
 
@@ -53,6 +54,12 @@ export default class KYVE {
     const state = await readContract(client, CONTRACT);
     if (this.poolName in state.pools) {
       this.pool = state.pools[this.poolName];
+      console.log(
+        `\nFound pool with name "${
+          this.poolName
+          // @ts-ignore
+        }" in the KYVE contract.\n  architecture = ${this.pool!.architecture}`
+      );
     } else {
       throw Error(
         `No pool with name "${this.poolName}" was found in the KYVE contract.`
@@ -60,10 +67,11 @@ export default class KYVE {
     }
 
     // @ts-ignore
-    // TODO: Write interface for contract.
     if (address === this.pool!.uploader) {
+      console.log("\nRunning as an uploader ...");
       this.uploader();
     } else {
+      console.log("\nRunning as a validator ...");
       this.validator();
     }
   }
@@ -72,6 +80,11 @@ export default class KYVE {
     const node = new Observable((subscribe) => this.uploadFunc(subscribe));
 
     node.subscribe((data) => {
+      // console.log(
+      //   // @ts-ignore
+      //   `\nRecieved data with tags:\n${JSON.stringify(data.tags, undefined, 2)}`
+      // );
+
       // @ts-ignore
       this.buffer.push(data);
       this.bundleAndUpload();
@@ -116,6 +129,12 @@ export default class KYVE {
 
       await client.transactions.sign(tx, this.keyfile);
       await client.transactions.post(tx);
+
+      console.log(
+        `\nSent a bundle with ${items.length} items\n  txID = ${
+          tx.id
+        }\n  cost = ${client.ar.winstonToAr(tx.reward)} AR`
+      );
     }
   }
 
