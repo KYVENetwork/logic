@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "arweave": "^1.10.11",
+    "arweave-bundles": "^1.0.3",
     "rxjs": "^6.6.6",
     "smartweave": "^0.4.27"
   },
