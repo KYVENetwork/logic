@@ -1,6 +1,12 @@
 import Arweave from "arweave";
 import ArweaveBundles from "arweave-bundles";
 import deepHash from "arweave/node/lib/deepHash";
+import {
+  UploadFunction,
+  ValidateFunction,
+  UploadFunctionReturn,
+  ValidateFunctionReturn,
+} from "./faces";
 import { JWKInterface } from "arweave/node/lib/wallet";
 import { readContract, interactWrite } from "smartweave";
 import { Observable } from "rxjs";
@@ -20,12 +26,9 @@ const bundles = ArweaveBundles({
 export const CONTRACT = "1htMi-6Ue7jfxERuU4PKDulYpFMKwmDE5oZTgO_BEAI";
 
 export default class KYVE {
-  public uploadFunc: Function;
-  public validateFunc: Function;
-  private buffer: {
-    data: any;
-    tags?: { name: string; value: string }[];
-  }[] = [];
+  public uploadFunc: UploadFunction;
+  public validateFunc: ValidateFunction;
+  private buffer: UploadFunctionReturn[] = [];
 
   // TODO: Write interface for contract.
   public pool?: Object;
@@ -34,8 +37,8 @@ export default class KYVE {
   private keyfile: JWKInterface;
 
   constructor(
-    uploadFunc: Function,
-    validateFunc: Function,
+    uploadFunc: UploadFunction,
+    validateFunc: ValidateFunction,
     options: {
       pool: string;
       jwk: JWKInterface;
@@ -77,15 +80,11 @@ export default class KYVE {
   }
 
   private uploader() {
-    const node = new Observable((subscribe) => this.uploadFunc(subscribe));
+    const node = new Observable<UploadFunctionReturn>((subscriber) =>
+      this.uploadFunc(subscriber)
+    );
 
     node.subscribe((data) => {
-      // console.log(
-      //   // @ts-ignore
-      //   `\nRecieved data with tags:\n${JSON.stringify(data.tags, undefined, 2)}`
-      // );
-
-      // @ts-ignore
       this.buffer.push(data);
       this.bundleAndUpload();
     });
@@ -139,12 +138,15 @@ export default class KYVE {
   }
 
   private validator() {
-    const node = new Observable((subscribe) => this.validateFunc(subscribe));
+    const node = new Observable<ValidateFunctionReturn>((subscriber) =>
+      this.validateFunc(subscriber)
+    );
 
-    node.subscribe((valid) => {
-      if (valid) {
-        // TODO: Log.
+    node.subscribe((res) => {
+      if (res.valid) {
+        console.log(`\nSuccessfully validated a block.\n  txID = ${res.id}`);
       } else {
+        console.log(`\nFound an invalid block.\n  txID = ${res.id}`);
         this.raiseConcern();
       }
     });
@@ -155,6 +157,6 @@ export default class KYVE {
       function: "deny",
       pool: this.poolName,
     });
-    // TODO: Log.
+    console.log(`Raised a dispute in the DAO.\n  txID = ${id}`);
   }
 }
