@@ -1,17 +1,10 @@
-# KYVE
-
-## About
-
-KYVE is an initiative to store any data stream, with built-in validation. By leveraging the Arweave blockchain, we can
-permanently and immutably store this data.
-The network is powered by decentralised archivers and validators. These nodes reside in pools, each pool focusing on
-archiving a specific data stream. Pools are funded by $KYVE tokens, and anyone can fund these storage initiatives by
-depositing tokens.
-A designated archiver is appointed by a DAO (Decentralized Autonomous Organisation) for each pool. Nodes are
-incentivised by a unique staking system, which involves them locking their $KYVE tokens while being active in the pool.
-Validators will "get together" and vote on whether the designated archiver is properly doing it's job. If the validators
-come to a consensus that the archiver is no longer acting honestly or reliably, a new archiver will be decided upon in
-the DAO. Validators can seemlessly transition into an archiver if need be.
+<p align="center">
+  <a href="https://kyve.network">
+    <img src="https://user-images.githubusercontent.com/62398724/110093923-289d6400-7d93-11eb-9d37-3ab7de5b752b.png" height="96">
+  </a>
+  <h3 align="center"><code>@kyve/logic</code></h3>
+  <p align="center">A protocol for verified data streams.</p>
+</p>
 
 ## Usage
 
@@ -21,7 +14,7 @@ the DAO. Validators can seemlessly transition into an archiver if need be.
 yarn add @kyve/logic
 ```
 
-### Using KYVE in your Application
+### Using KYVE in your application
 
 #### Initiating a node
 
@@ -33,29 +26,29 @@ const node = new KYVE();
 
 #### Node configuration
 
-KYVE only requires two custom functions. One which fetches the data from your
-data source and one which validates this data. You can then simply add these two functions into the KYVE instance.
+KYVE requires two custom functions. One which fetches the data from your data source and one which validates this data.
+You can then simply add these two functions into the KYVE instance.
 
 ###### Specifying an upload function
 
-To pass data into KYVE, simply call `subscriber.next()`
+To pass data into KYVE, simply call `subscriber.next()`:
 
 ```ts
 const myDataFetcher = async (subscriber) => {
   // use your custom logic here
   const data = ...
-  subscriber.next({data})
+  subscriber.next({ data });
 }
 ```
 
-You can also add custom tags to your transactions.
+You can also optionally add custom tags to your transactions:
 
 ```ts
 const myDataFetcher = async (subscriber) => {
   // use your custom logic here
   const data = ...
   const tags = [...]
-  subscriber.next({data, tags})
+  subscriber.next({ data, tags });
 }
 ```
 
@@ -68,12 +61,12 @@ const myDataValidator = async (subscriber) => {
   const arweaveTxId = ...
   // validate the data with your custom logic
   const isValid = ...
-  // pass the resulst into KYVE
-  subscriber.next({ valid: isValid, id: arweaveTxId })
+  // pass the result into KYVE
+  subscriber.next({ valid: isValid, id: arweaveTxId });
 }
 ```
 
-###### Setting the functions in the node
+###### Giving the node your functions
 
 ```ts
 import KYVE from "@kyve/logic";
@@ -82,28 +75,30 @@ const node = new KYVE(myDataFetcher, myDataValidator);
 ```
 
 ###### Pool configuration
+
 Next you need to set up the pool. You can create a new pool here.
-After you have created the pool, insert its name and your arweave keyfile into the config.
+After you have created the pool, insert its name and your arweave keyfile into the node config:
 
 ```ts
 import KYVE from "@kyve/logic";
 
-const pool = "demo-pool"
+const pool = "demo-pool";
 const jwk = ...
 
-const node = new KYVE(myDataFetcher, myDataValidator, {pool, jwk});
+const node = new KYVE(myDataFetcher, myDataValidator, { pool, jwk });
 ```
 
 ###### Running your node
-To run your node, simply call the `.run()` function.
+
+To run your node, simply call the `.run()` function:
 
 ```ts
 import KYVE from "@kyve/logic";
 
-const pool = "demo-pool"
+const pool = "demo-pool";
 const jwk = ...
 
-const node = new KYVE(myDataFetcher, myDataValidator, {pool, jwk});
+const node = new KYVE(myDataFetcher, myDataValidator, { pool, jwk });
 
 (async () => {
   await node.run();
