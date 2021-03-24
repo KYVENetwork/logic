@@ -8,7 +8,8 @@ export interface UploadFunctionReturn {
 }
 
 export type UploadFunction = (
-  subscriber: Subscriber<UploadFunctionReturn>
+  subscriber: Subscriber<UploadFunctionReturn>,
+  config: any
 ) => void;
 
 // Types for the validate function
@@ -19,5 +20,6 @@ export interface ValidateFunctionReturn {
 }
 
 export type ValidateFunction = (
-  subscriber: Subscriber<ValidateFunctionReturn>
+  subscriber: Subscriber<ValidateFunctionReturn>,
+  config: any
 ) => void;

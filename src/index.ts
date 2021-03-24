@@ -81,7 +81,8 @@ export default class KYVE {
 
   private uploader() {
     const node = new Observable<UploadFunctionReturn>((subscriber) =>
-      this.uploadFunc(subscriber)
+      // @ts-ignore
+      this.uploadFunc(subscriber, this.pool!.config)
     );
 
     node.subscribe((data) => {
@@ -139,7 +140,8 @@ export default class KYVE {
 
   private validator() {
     const node = new Observable<ValidateFunctionReturn>((subscriber) =>
-      this.validateFunc(subscriber)
+      // @ts-ignore
+      this.validateFunc(subscriber, this.pool!.config)
     );
 
     node.subscribe((res) => {
