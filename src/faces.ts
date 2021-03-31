@@ -1,4 +1,5 @@
-import { Subscriber } from "rxjs";
+import { Subscriber, Observable } from "rxjs";
+import { GQLTransactionInterface } from "ardb/lib/faces/gql";
 
 // Types for the upload function
 
@@ -14,12 +15,19 @@ export type UploadFunction = (
 
 // Types for the validate function
 
+export interface ListenFunctionReturn {
+  id: string;
+  transaction: GQLTransactionInterface;
+  block: number;
+}
+
 export interface ValidateFunctionReturn {
   valid: boolean;
   id: string;
 }
 
 export type ValidateFunction = (
+  listener: Observable<ListenFunctionReturn>,
   subscriber: Subscriber<ValidateFunctionReturn>,
   config: any
 ) => void;

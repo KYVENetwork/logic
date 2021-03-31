@@ -7,11 +7,11 @@ import {
   ValidateFunction,
   UploadFunctionReturn,
   ValidateFunctionReturn,
+  ListenFunctionReturn,
 } from "./faces";
 import { JWKInterface } from "arweave/node/lib/wallet";
 import { readContract, interactWrite } from "smartweave";
 import { Observable } from "rxjs";
-import { GQLTransactionInterface } from "ardb/lib/faces/gql";
 
 const client = new Arweave({
   host: "arweave.net",
@@ -31,8 +31,8 @@ export const CONTRACT = "v2p-0OhAxDCCMLjQ8e_6_YhT3Tfw2uUAbIQ3PXRtjr4";
 export const APP_NAME = "KYVE - DEV";
 
 export default class KYVE {
-  public uploadFunc?: UploadFunction;
-  public validateFunc?: ValidateFunction;
+  public uploadFunc: UploadFunction;
+  public validateFunc: ValidateFunction;
   private buffer: UploadFunctionReturn[] = [];
 
   // TODO: Write interface for contract.
@@ -40,15 +40,15 @@ export default class KYVE {
   public pool: any;
   public poolName: string;
 
-  private keyfile?: JWKInterface;
+  private keyfile: JWKInterface;
 
   constructor(
     options: {
       pool: string;
-      jwk?: JWKInterface;
+      jwk: JWKInterface;
     },
-    uploadFunc?: UploadFunction,
-    validateFunc?: ValidateFunction
+    uploadFunc: UploadFunction,
+    validateFunc: ValidateFunction
   ) {
     this.uploadFunc = uploadFunc;
     this.validateFunc = validateFunc;
@@ -57,7 +57,7 @@ export default class KYVE {
     this.keyfile = options.jwk;
   }
 
-  public async init() {
+  public async run() {
     const state = await readContract(client, CONTRACT);
     if (this.poolName in state.pools) {
       this.pool = state.pools[this.poolName];
@@ -67,17 +67,6 @@ export default class KYVE {
     } else {
       throw Error(
         `No pool with name "${this.poolName}" was found in the KYVE contract.`
-      );
-    }
-  }
-
-  public async run() {
-    if (!this.pool) {
-      await this.init();
-    }
-    if (!this.uploadFunc || !this.validateFunc || !this.keyfile) {
-      throw Error(
-        `No upload function, validation function, or keyfile has been supplied.`
       );
     }
 
@@ -91,16 +80,8 @@ export default class KYVE {
     }
   }
 
-  public async listen() {
-    if (!this.pool) {
-      await this.init();
-    }
-
-    return new Observable<{
-      id: string;
-      transaction: GQLTransactionInterface;
-      block: number;
-    }>((subscriber) => {
+  private listener() {
+    return new Observable<ListenFunctionReturn>((subscriber) => {
       const main = async (latest: number) => {
         const height = (await client.network.getInfo()).height;
 
@@ -136,7 +117,7 @@ export default class KYVE {
 
   private uploader() {
     const node = new Observable<UploadFunctionReturn>((subscriber) =>
-      this.uploadFunc!(subscriber, this.pool.config)
+      this.uploadFunc(subscriber, this.pool.config)
     );
 
     node.subscribe((data) => {
@@ -164,22 +145,22 @@ export default class KYVE {
               ...(entry.tags || []),
             ],
           },
-          this.keyfile!
+          this.keyfile
         );
-        items.push(await bundles.sign(item, this.keyfile!));
+        items.push(await bundles.sign(item, this.keyfile));
       }
 
       const bundle = await bundles.bundleData(items);
       const tx = await client.createTransaction(
         { data: JSON.stringify(bundle) },
-        this.keyfile!
+        this.keyfile
       );
 
       tx.addTag("Bundle-Format", "json");
       tx.addTag("Bundle-Version", "1.0.0");
       tx.addTag("Content-Type", "application/json");
 
-      await client.transactions.sign(tx, this.keyfile!);
+      await client.transactions.sign(tx, this.keyfile);
       await client.transactions.post(tx);
 
       console.log(
@@ -192,7 +173,7 @@ export default class KYVE {
 
   private validator() {
     const node = new Observable<ValidateFunctionReturn>((subscriber) =>
-      this.validateFunc!(subscriber, this.pool.config)
+      this.validateFunc(this.listener(), subscriber, this.pool.config)
     );
 
     node.subscribe((res) => {
@@ -206,7 +187,7 @@ export default class KYVE {
   }
 
   private async raiseConcern() {
-    const id = await interactWrite(client, this.keyfile!, CONTRACT, {
+    const id = await interactWrite(client, this.keyfile, CONTRACT, {
       function: "deny",
       pool: this.poolName,
     });
