@@ -25,12 +25,13 @@ const bundles = ArweaveBundles({
   deepHash,
 });
 
-const gql = new ArDB(client);
-
 export const CONTRACT = "v2p-0OhAxDCCMLjQ8e_6_YhT3Tfw2uUAbIQ3PXRtjr4";
 export const APP_NAME = "KYVE - DEV";
 
 export default class KYVE {
+  public arweave: Arweave = client;
+  public ardb: ArDB;
+
   public uploadFunc: UploadFunction;
   public validateFunc: ValidateFunction;
   private buffer: UploadFunctionReturn[] = [];
@@ -46,6 +47,7 @@ export default class KYVE {
     options: {
       pool: string;
       jwk: JWKInterface;
+      arweave?: Arweave;
     },
     uploadFunc: UploadFunction,
     validateFunc: ValidateFunction
@@ -55,10 +57,12 @@ export default class KYVE {
 
     this.poolName = options.pool;
     this.keyfile = options.jwk;
+    if (options.arweave) this.arweave = options.arweave;
+    this.ardb = new ArDB(this.arweave);
   }
 
   public async run() {
-    const state = await readContract(client, CONTRACT);
+    const state = await readContract(this.arweave, CONTRACT);
     if (this.poolName in state.pools) {
       this.pool = state.pools[this.poolName];
       console.log(
@@ -70,7 +74,7 @@ export default class KYVE {
       );
     }
 
-    const address = await client.wallets.getAddress(this.keyfile);
+    const address = await this.arweave.wallets.getAddress(this.keyfile);
     if (address === this.pool.uploader) {
       console.log("\nRunning as an uploader ...");
       this.uploader();
@@ -83,12 +87,12 @@ export default class KYVE {
   private listener() {
     return new Observable<ListenFunctionReturn>((subscriber) => {
       const main = async (latest: number) => {
-        const height = (await client.network.getInfo()).height;
+        const height = (await this.arweave.network.getInfo()).height;
 
         if (latest === height) {
           return;
         } else {
-          const res = await gql
+          const res = await this.ardb
             .search()
             .min(latest)
             .max(height)
@@ -111,7 +115,7 @@ export default class KYVE {
         setTimeout(main, 300000, height);
       };
 
-      client.network.getInfo().then((res) => main(res.height));
+      this.arweave.network.getInfo().then((res) => main(res.height));
     });
   }
 
@@ -151,7 +155,7 @@ export default class KYVE {
       }
 
       const bundle = await bundles.bundleData(items);
-      const tx = await client.createTransaction(
+      const tx = await this.arweave.createTransaction(
         { data: JSON.stringify(bundle) },
         this.keyfile
       );
@@ -160,13 +164,13 @@ export default class KYVE {
       tx.addTag("Bundle-Version", "1.0.0");
       tx.addTag("Content-Type", "application/json");
 
-      await client.transactions.sign(tx, this.keyfile);
-      await client.transactions.post(tx);
+      await this.arweave.transactions.sign(tx, this.keyfile);
+      await this.arweave.transactions.post(tx);
 
       console.log(
         `\nSent a bundle with ${items.length} items\n  txID = ${
           tx.id
-        }\n  cost = ${client.ar.winstonToAr(tx.reward)} AR`
+        }\n  cost = ${this.arweave.ar.winstonToAr(tx.reward)} AR`
       );
     }
   }
@@ -187,10 +191,19 @@ export default class KYVE {
   }
 
   private async raiseConcern() {
-    const id = await interactWrite(client, this.keyfile, CONTRACT, {
+    const id = await interactWrite(this.arweave, this.keyfile, CONTRACT, {
       function: "deny",
       pool: this.poolName,
     });
     console.log(`Raised a dispute in the DAO.\n  txID = ${id}`);
   }
 }
+
+export const getData = async (id: string) => {
+  const res = await client.transactions.getData(id, {
+    decode: true,
+    string: true,
+  });
+
+  return res.toString();
+};
