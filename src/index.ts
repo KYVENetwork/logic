@@ -1,5 +1,6 @@
 import Arweave from "arweave";
 import ArweaveBundles from "arweave-bundles";
+import ArDB from "ardb";
 import deepHash from "arweave/node/lib/deepHash";
 import {
   UploadFunction,
@@ -23,7 +24,9 @@ const bundles = ArweaveBundles({
   deepHash,
 });
 
-export const CONTRACT = "1htMi-6Ue7jfxERuU4PKDulYpFMKwmDE5oZTgO_BEAI";
+const gql = new ArDB(client);
+
+export const CONTRACT = "v2p-0OhAxDCCMLjQ8e_6_YhT3Tfw2uUAbIQ3PXRtjr4";
 
 export default class KYVE {
   public uploadFunc: UploadFunction;
@@ -31,6 +34,7 @@ export default class KYVE {
   private buffer: UploadFunctionReturn[] = [];
 
   // TODO: Write interface for contract.
+  // TODO: Refetch!!!
   public pool?: Object;
   public poolName: string;
 
@@ -77,6 +81,45 @@ export default class KYVE {
       console.log("\nRunning as a validator ...");
       this.validator();
     }
+  }
+
+  public listen() {
+    return new Observable<{
+      id: string;
+      block: number;
+    }>((subscriber) => {
+      const main = async (latest: number) => {
+        const height = (await client.network.getInfo()).height;
+
+        if (latest === height) {
+          return;
+        } else {
+          const res = await gql
+            .search()
+            .min(latest)
+            .max(height)
+            // @ts-ignore
+            .from(this.pool!.uploader)
+            .tag("Application", "KYVE - DEV")
+            .tag("Pool", this.poolName)
+            // @ts-ignore
+            .tag("Architecture", this.pool!.architecture)
+            .findAll();
+
+          // @ts-ignore
+          for (const { node } of res) {
+            subscriber.next({
+              id: node.id,
+              block: node.block.height,
+            });
+          }
+        }
+
+        setTimeout(main, 300000, height);
+      };
+
+      client.network.getInfo().then((res) => main(res.height));
+    });
   }
 
   private uploader() {
