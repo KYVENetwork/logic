@@ -27,26 +27,27 @@ const bundles = ArweaveBundles({
 const gql = new ArDB(client);
 
 export const CONTRACT = "v2p-0OhAxDCCMLjQ8e_6_YhT3Tfw2uUAbIQ3PXRtjr4";
+export const APP_NAME = "KYVE - DEV";
 
 export default class KYVE {
-  public uploadFunc: UploadFunction;
-  public validateFunc: ValidateFunction;
+  public uploadFunc?: UploadFunction;
+  public validateFunc?: ValidateFunction;
   private buffer: UploadFunctionReturn[] = [];
 
   // TODO: Write interface for contract.
   // TODO: Refetch!!!
-  public pool?: Object;
+  public pool: any;
   public poolName: string;
 
-  private keyfile: JWKInterface;
+  private keyfile?: JWKInterface;
 
   constructor(
-    uploadFunc: UploadFunction,
-    validateFunc: ValidateFunction,
     options: {
       pool: string;
-      jwk: JWKInterface;
-    }
+      jwk?: JWKInterface;
+    },
+    uploadFunc?: UploadFunction,
+    validateFunc?: ValidateFunction
   ) {
     this.uploadFunc = uploadFunc;
     this.validateFunc = validateFunc;
@@ -55,26 +56,32 @@ export default class KYVE {
     this.keyfile = options.jwk;
   }
 
-  public async run() {
-    const address = await client.wallets.getAddress(this.keyfile);
-
+  public async init() {
     const state = await readContract(client, CONTRACT);
     if (this.poolName in state.pools) {
       this.pool = state.pools[this.poolName];
       console.log(
-        `\nFound pool with name "${
-          this.poolName
-          // @ts-ignore
-        }" in the KYVE contract.\n  architecture = ${this.pool!.architecture}`
+        `\nFound pool with name "${this.poolName}" in the KYVE contract.\n  architecture = ${this.pool.architecture}`
       );
     } else {
       throw Error(
         `No pool with name "${this.poolName}" was found in the KYVE contract.`
       );
     }
+  }
 
-    // @ts-ignore
-    if (address === this.pool!.uploader) {
+  public async run() {
+    if (!this.pool) {
+      await this.init();
+    }
+    if (!this.uploadFunc || !this.validateFunc || !this.keyfile) {
+      throw Error(
+        `No upload function, validation function, or keyfile has been supplied.`
+      );
+    }
+
+    const address = await client.wallets.getAddress(this.keyfile);
+    if (address === this.pool.uploader) {
       console.log("\nRunning as an uploader ...");
       this.uploader();
     } else {
@@ -83,7 +90,11 @@ export default class KYVE {
     }
   }
 
-  public listen() {
+  public async listen() {
+    if (!this.pool) {
+      await this.init();
+    }
+
     return new Observable<{
       id: string;
       block: number;
@@ -98,12 +109,10 @@ export default class KYVE {
             .search()
             .min(latest)
             .max(height)
-            // @ts-ignore
-            .from(this.pool!.uploader)
-            .tag("Application", "KYVE - DEV")
+            .from(this.pool.uploader)
+            .tag("Application", APP_NAME)
             .tag("Pool", this.poolName)
-            // @ts-ignore
-            .tag("Architecture", this.pool!.architecture)
+            .tag("Architecture", this.pool.architecture)
             .findAll();
 
           // @ts-ignore
@@ -124,8 +133,7 @@ export default class KYVE {
 
   private uploader() {
     const node = new Observable<UploadFunctionReturn>((subscriber) =>
-      // @ts-ignore
-      this.uploadFunc(subscriber, this.pool!.config)
+      this.uploadFunc!(subscriber, this.pool.config)
     );
 
     node.subscribe((data) => {
@@ -135,8 +143,7 @@ export default class KYVE {
   }
 
   private async bundleAndUpload() {
-    // @ts-ignore
-    const bundleSize = this.pool!.bundleSize;
+    const bundleSize = this.pool.bundleSize;
 
     if (this.buffer.length >= bundleSize) {
       const buffer = this.buffer;
@@ -148,29 +155,28 @@ export default class KYVE {
           {
             data: JSON.stringify(entry.data),
             tags: [
-              { name: "Application", value: "KYVE - DEV" },
+              { name: "Application", value: APP_NAME },
               { name: "Pool", value: this.poolName },
-              // @ts-ignore
-              { name: "Architecture", value: this.pool!.architecture },
+              { name: "Architecture", value: this.pool.architecture },
               ...(entry.tags || []),
             ],
           },
-          this.keyfile
+          this.keyfile!
         );
-        items.push(await bundles.sign(item, this.keyfile));
+        items.push(await bundles.sign(item, this.keyfile!));
       }
 
       const bundle = await bundles.bundleData(items);
       const tx = await client.createTransaction(
         { data: JSON.stringify(bundle) },
-        this.keyfile
+        this.keyfile!
       );
 
       tx.addTag("Bundle-Format", "json");
       tx.addTag("Bundle-Version", "1.0.0");
       tx.addTag("Content-Type", "application/json");
 
-      await client.transactions.sign(tx, this.keyfile);
+      await client.transactions.sign(tx, this.keyfile!);
       await client.transactions.post(tx);
 
       console.log(
@@ -183,8 +189,7 @@ export default class KYVE {
 
   private validator() {
     const node = new Observable<ValidateFunctionReturn>((subscriber) =>
-      // @ts-ignore
-      this.validateFunc(subscriber, this.pool!.config)
+      this.validateFunc!(subscriber, this.pool.config)
     );
 
     node.subscribe((res) => {
@@ -198,7 +203,7 @@ export default class KYVE {
   }
 
   private async raiseConcern() {
-    const id = await interactWrite(client, this.keyfile, CONTRACT, {
+    const id = await interactWrite(client, this.keyfile!, CONTRACT, {
       function: "deny",
       pool: this.poolName,
     });
