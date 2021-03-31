@@ -11,6 +11,7 @@ import {
 import { JWKInterface } from "arweave/node/lib/wallet";
 import { readContract, interactWrite } from "smartweave";
 import { Observable } from "rxjs";
+import { GQLTransactionInterface } from "ardb/lib/faces/gql";
 
 const client = new Arweave({
   host: "arweave.net",
@@ -97,6 +98,7 @@ export default class KYVE {
 
     return new Observable<{
       id: string;
+      transaction: GQLTransactionInterface;
       block: number;
     }>((subscriber) => {
       const main = async (latest: number) => {
@@ -119,6 +121,7 @@ export default class KYVE {
           for (const { node } of res) {
             subscriber.next({
               id: node.id,
+              transaction: node,
               block: node.block.height,
             });
           }
