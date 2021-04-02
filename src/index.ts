@@ -87,11 +87,12 @@ export default class KYVE {
       });
       this.validator();
 
-      process.on("exit", async () => {
+      process.on("SIGINT", async () => {
         await interactWrite(this.arweave, this.keyfile, CONTRACT, {
           function: "unregister",
           id: this.poolID,
         });
+        process.exit();
       });
     }
   }
