@@ -25,7 +25,7 @@ const bundles = ArweaveBundles({
   deepHash,
 });
 
-export const CONTRACT = "v2p-0OhAxDCCMLjQ8e_6_YhT3Tfw2uUAbIQ3PXRtjr4";
+export const CONTRACT = "QtsSQ-V5V7UBG0jXr42mL8eW30f2uKHBJSJZkvz9maQ";
 export const APP_NAME = "KYVE - DEV";
 
 export default class KYVE {
@@ -39,13 +39,13 @@ export default class KYVE {
   // TODO: Write interface for contract.
   // TODO: Refetch!!!
   public pool: any;
-  public poolName: string;
+  public poolID: number;
 
   private keyfile: JWKInterface;
 
   constructor(
     options: {
-      pool: string;
+      pool: number;
       jwk: JWKInterface;
       arweave?: Arweave;
     },
@@ -55,7 +55,7 @@ export default class KYVE {
     this.uploadFunc = uploadFunc;
     this.validateFunc = validateFunc;
 
-    this.poolName = options.pool;
+    this.poolID = options.pool;
     this.keyfile = options.jwk;
     if (options.arweave) this.arweave = options.arweave;
     this.ardb = new ArDB(this.arweave);
@@ -63,14 +63,14 @@ export default class KYVE {
 
   public async run() {
     const state = await readContract(this.arweave, CONTRACT);
-    if (this.poolName in state.pools) {
-      this.pool = state.pools[this.poolName];
+    if (this.poolID >= 0 && this.poolID < state.pools.length) {
+      this.pool = state.pools[this.poolID];
       console.log(
-        `\nFound pool with name "${this.poolName}" in the KYVE contract.\n  architecture = ${this.pool.architecture}`
+        `\nFound pool with name "${this.pool.name}" in the KYVE contract.\n  architecture = ${this.pool.architecture}`
       );
     } else {
       throw Error(
-        `No pool with name "${this.poolName}" was found in the KYVE contract.`
+        `No pool with id "${this.poolID}" was found in the KYVE contract.`
       );
     }
 
@@ -80,7 +80,19 @@ export default class KYVE {
       this.uploader();
     } else {
       console.log("\nRunning as a validator ...");
+
+      await interactWrite(this.arweave, this.keyfile, CONTRACT, {
+        function: "register",
+        id: this.poolID,
+      });
       this.validator();
+
+      process.on("exit", async () => {
+        await interactWrite(this.arweave, this.keyfile, CONTRACT, {
+          function: "unregister",
+          id: this.poolID,
+        });
+      });
     }
   }
 
@@ -98,7 +110,7 @@ export default class KYVE {
             .max(height)
             .from(this.pool.uploader)
             .tag("Application", APP_NAME)
-            .tag("Pool", this.poolName)
+            .tag("Pool", this.poolID.toString())
             .tag("Architecture", this.pool.architecture)
             .findAll();
 
@@ -144,7 +156,7 @@ export default class KYVE {
             data: JSON.stringify(entry.data),
             tags: [
               { name: "Application", value: APP_NAME },
-              { name: "Pool", value: this.poolName },
+              { name: "Pool", value: this.poolID.toString() },
               { name: "Architecture", value: this.pool.architecture },
               ...(entry.tags || []),
             ],
@@ -193,7 +205,7 @@ export default class KYVE {
   private async raiseConcern() {
     const id = await interactWrite(this.arweave, this.keyfile, CONTRACT, {
       function: "deny",
-      pool: this.poolName,
+      id: this.poolID,
     });
     console.log(`Raised a dispute in the DAO.\n  txID = ${id}`);
   }
