@@ -3,14 +3,14 @@ import ArweaveBundles from "arweave-bundles";
 import ArDB from "ardb";
 import deepHash from "arweave/node/lib/deepHash";
 import {
-  UploadFunction,
-  ValidateFunction,
-  UploadFunctionReturn,
-  ValidateFunctionReturn,
   ListenFunctionReturn,
+  UploadFunction,
+  UploadFunctionReturn,
+  ValidateFunction,
+  ValidateFunctionReturn,
 } from "./faces";
 import { JWKInterface } from "arweave/node/lib/wallet";
-import { readContract, interactWrite } from "smartweave";
+import { interactWrite, readContract } from "smartweave";
 import { Observable } from "rxjs";
 
 const client = new Arweave({
@@ -41,7 +41,7 @@ export default class KYVE {
   public pool: any;
   public poolID: number;
 
-  private keyfile: JWKInterface;
+  private readonly keyfile: JWKInterface;
 
   constructor(
     options: {
@@ -79,12 +79,11 @@ export default class KYVE {
       console.log("\nRunning as an uploader ...");
       this.uploader();
     } else {
-      console.log("\nRunning as a validator ...");
-
       const id = await interactWrite(this.arweave, this.keyfile, CONTRACT, {
         function: "register",
         id: this.poolID,
       });
+
       let status = (await this.arweave.transactions.getStatus(id)).status;
 
       while (status !== 200) {
@@ -94,12 +93,13 @@ export default class KYVE {
 
         if (status === 200 || status === 202) {
           // mined / pending
+          console.log("\nWaiting for registration to be mined.");
         } else {
-          console.log("\nRegister did not go through. Try again.");
-          process.exit();
+          throw Error(`Registration for pool with id ${this.poolID} failed.`);
         }
       }
 
+      console.log("\nRunning as a validator ...");
       this.validator();
 
       process.on("SIGINT", async () => {
@@ -107,6 +107,7 @@ export default class KYVE {
           function: "unregister",
           id: this.poolID,
         });
+        console.log("\nUnregistered");
         process.exit();
       });
     }
@@ -160,7 +161,7 @@ export default class KYVE {
 
   private async bundleAndUpload() {
     const bundleSize = this.pool.bundleSize;
-
+    console.log(`\nBuffer size is now: ${this.buffer.length}`);
     if (this.buffer.length >= bundleSize) {
       const buffer = this.buffer;
       this.buffer = [];
@@ -223,7 +224,7 @@ export default class KYVE {
       function: "deny",
       id: this.poolID,
     });
-    console.log(`Raised a dispute in the DAO.\n  txID = ${id}`);
+    console.log(`\nRaised a dispute in the DAO.\n  txID = ${id}`);
   }
 }
 
