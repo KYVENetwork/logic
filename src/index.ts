@@ -118,6 +118,8 @@ export default class KYVE {
       const main = async (latest: number) => {
         const height = (await this.arweave.network.getInfo()).height;
 
+        console.log(`\n[listener] height = ${height}, latest = ${latest}.`);
+
         if (latest === height) {
           return;
         } else {
@@ -132,7 +134,13 @@ export default class KYVE {
             .findAll();
 
           // @ts-ignore
+          console.log(`\n[listener] Found ${res.length} new transactions.`);
+
+          // @ts-ignore
           for (const { node } of res) {
+            console.log(
+              `\n[listener] Parsing transaction.\n  txID = ${node.id}`
+            );
             subscriber.next({
               id: node.id,
               transaction: node,
