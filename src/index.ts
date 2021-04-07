@@ -120,9 +120,7 @@ export default class KYVE {
 
         console.log(`\n[listener] height = ${height}, latest = ${latest}.`);
 
-        if (latest === height) {
-          return;
-        } else {
+        if (latest !== height) {
           const res = await this.ardb
             .search()
             .min(latest)
@@ -152,9 +150,7 @@ export default class KYVE {
         setTimeout(main, 150000, height);
       };
 
-      this.arweave.network
-        .getInfo()
-        .then(async (res) => await main(res.height));
+      this.arweave.network.getInfo().then((res) => main(res.height));
     });
   }
 
