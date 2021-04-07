@@ -87,7 +87,7 @@ export default class KYVE {
       let status = (await this.arweave.transactions.getStatus(id)).status;
 
       while (status !== 200) {
-        setTimeout(() => {}, 30000);
+        await sleep(30000);
 
         status = (await this.arweave.transactions.getStatus(id)).status;
 
@@ -235,4 +235,8 @@ export const getData = async (id: string) => {
   });
 
   return res.toString();
+};
+
+const sleep = async (ms: number) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 };
