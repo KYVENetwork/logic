@@ -25,7 +25,7 @@ const bundles = ArweaveBundles({
   deepHash,
 });
 
-export const CONTRACT = "hffxunWs1omU0Jh1twyqMJ6hJjPImMAXo4c1acmdnnU";
+export const CONTRACT = "oVUvLJ8dEMtOldu9JF3n-cA5tsO7Gel9MNGPPu2XFUA";
 export const APP_NAME = "KYVE - DEV";
 
 export default class KYVE {
