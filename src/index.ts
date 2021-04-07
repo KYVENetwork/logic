@@ -25,7 +25,7 @@ const bundles = ArweaveBundles({
   deepHash,
 });
 
-export const CONTRACT = "QtsSQ-V5V7UBG0jXr42mL8eW30f2uKHBJSJZkvz9maQ";
+export const CONTRACT = "hffxunWs1omU0Jh1twyqMJ6hJjPImMAXo4c1acmdnnU";
 export const APP_NAME = "KYVE - DEV";
 
 export default class KYVE {
@@ -81,10 +81,25 @@ export default class KYVE {
     } else {
       console.log("\nRunning as a validator ...");
 
-      await interactWrite(this.arweave, this.keyfile, CONTRACT, {
+      const id = await interactWrite(this.arweave, this.keyfile, CONTRACT, {
         function: "register",
         id: this.poolID,
       });
+      let status = (await this.arweave.transactions.getStatus(id)).status;
+
+      while (status !== 200) {
+        setTimeout(() => {}, 30000);
+
+        status = (await this.arweave.transactions.getStatus(id)).status;
+
+        if (status === 200 || status === 202) {
+          // mined / pending
+        } else {
+          console.log("\nRegister did not go through. Try again.");
+          process.exit();
+        }
+      }
+
       this.validator();
 
       process.on("SIGINT", async () => {
