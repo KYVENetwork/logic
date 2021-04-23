@@ -1,7 +1,5 @@
 import Arweave from "arweave";
-import ArweaveBundles from "arweave-bundles";
 import ArDB from "ardb";
-import deepHash from "arweave/node/lib/deepHash";
 import {
   ListenFunctionReturn,
   UploadFunction,
@@ -10,27 +8,18 @@ import {
   ValidateFunctionReturn,
 } from "./faces";
 import { JWKInterface } from "arweave/node/lib/wallet";
-import { interactWrite, readContract } from "smartweave";
+import { readContract } from "smartweave";
 import { Observable } from "rxjs";
+import { arweaveBundles as bundles, arweaveClient } from "./extensions";
 
-const client = new Arweave({
-  host: "arweave.net",
-  port: 443,
-  protocol: "https",
-});
+import Contract from "@kyve/contract-lib";
 
-const bundles = ArweaveBundles({
-  utils: Arweave.utils,
-  crypto: Arweave.crypto,
-  deepHash,
-});
-
-export const CONTRACT = "oVUvLJ8dEMtOldu9JF3n-cA5tsO7Gel9MNGPPu2XFUA";
 export const APP_NAME = "KYVE - DEV";
 
 export default class KYVE {
-  public arweave: Arweave = client;
+  public arweave: Arweave = arweaveClient;
   public ardb: ArDB;
+  public contract: Contract;
 
   public uploadFunc: UploadFunction;
   public validateFunc: ValidateFunction;
@@ -40,12 +29,14 @@ export default class KYVE {
   // TODO: Refetch!!!
   public pool: any;
   public poolID: number;
+  public stake: number;
 
   private readonly keyfile: JWKInterface;
 
   constructor(
     options: {
       pool: number;
+      stake: number;
       jwk: JWKInterface;
       arweave?: Arweave;
     },
@@ -57,12 +48,18 @@ export default class KYVE {
 
     this.poolID = options.pool;
     this.keyfile = options.jwk;
-    if (options.arweave) this.arweave = options.arweave;
+    this.stake = options.stake;
+
+    if (options.arweave) {
+      this.arweave = options.arweave;
+    }
+
     this.ardb = new ArDB(this.arweave);
+    this.contract = new Contract(this.arweave, this.keyfile);
   }
 
   public async run() {
-    const state = await readContract(this.arweave, CONTRACT);
+    const state = await readContract(this.arweave, this.contract.ID);
     if (this.poolID >= 0 && this.poolID < state.pools.length) {
       this.pool = state.pools[this.poolID];
       console.log(
@@ -79,10 +76,18 @@ export default class KYVE {
       console.log("\nRunning as an uploader ...");
       this.uploader();
     } else {
-      const id = await interactWrite(this.arweave, this.keyfile, CONTRACT, {
-        function: "register",
-        id: this.poolID,
-      });
+      // check if validator has enough stake
+      const currentStake = state.pools[this.poolID].vault[address];
+      const diff = this.stake - currentStake;
+
+      // todo handle case if desired stake is smaller than current stake
+      if (diff > 0) {
+        const id = await this.contract.lock(this.poolID, diff);
+        // todo await transaction to be complete
+      }
+
+      // register validator
+      const id = await this.contract.register(this.poolID);
 
       let status = (await this.arweave.transactions.getStatus(id)).status;
 
@@ -103,10 +108,7 @@ export default class KYVE {
       this.validator();
 
       process.on("SIGINT", async () => {
-        await interactWrite(this.arweave, this.keyfile, CONTRACT, {
-          function: "unregister",
-          id: this.poolID,
-        });
+        await this.contract.unregister(this.poolID);
         console.log("\nUnregistered");
         process.exit();
       });
@@ -226,16 +228,13 @@ export default class KYVE {
   }
 
   private async raiseConcern() {
-    const id = await interactWrite(this.arweave, this.keyfile, CONTRACT, {
-      function: "deny",
-      id: this.poolID,
-    });
+    const id = await this.contract.deny(this.poolID);
     console.log(`\nRaised a dispute in the DAO.\n  txID = ${id}`);
   }
 }
 
 export const getData = async (id: string) => {
-  const res = await client.transactions.getData(id, {
+  const res = await arweaveClient.transactions.getData(id, {
     decode: true,
     string: true,
   });

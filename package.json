@@ -14,6 +14,7 @@
   "main": "dist/index",
   "types": "dist/index",
   "dependencies": {
+    "@kyve/contract-lib": "^0.1.0-alpha.2",
     "ardb": "^1.0.4",
     "arweave": "^1.10.11",
     "arweave-bundles": "^1.0.3",
