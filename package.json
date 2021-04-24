@@ -6,7 +6,8 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc",
-    "fmt": "prettier --write ."
+    "fmt": "prettier --write .",
+    "test": "nyc --reporter=text mocha -r ts-node/register src/__tests__/**/*.spec.ts"
   },
   "publishConfig": {
     "access": "public"
@@ -15,7 +16,7 @@
   "types": "dist/index",
   "dependencies": {
     "@kyve/contract-lib": "^0.1.0-alpha.2",
-    "ardb": "^1.0.4",
+    "ardb": "^1.0.8",
     "arweave": "^1.10.11",
     "arweave-bundles": "^1.0.3",
     "rxjs": "^6.6.6",
@@ -23,6 +24,13 @@
   },
   "devDependencies": {
     "prettier": "^2.2.1",
-    "typescript": "^4.2.2"
+    "typescript": "^4.2.2",
+    "@types/chai": "^4.2.16",
+    "@types/mocha": "^8.2.2",
+    "chai": "^4.3.4",
+    "chai-as-promised": "^7.1.1",
+    "mocha": "^8.3.2",
+    "nyc": "^15.1.0",
+    "ts-node": "^9.1.1"
   }
 }
