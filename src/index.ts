@@ -75,7 +75,7 @@ export default class KYVE {
     const address = await this.arweave.wallets.getAddress(this.keyfile);
 
     // check if validator has enough stake
-    const currentStake = state.pools[this.poolID].vault[address];
+    const currentStake = state.pools[this.poolID].vault[address] || 0;
     const diff = this.stake - currentStake;
 
     // todo handle case if desired stake is smaller than current stake
