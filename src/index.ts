@@ -13,6 +13,7 @@ import { arweaveBundles as bundles, arweaveClient } from "./extensions";
 
 import Contract from "@kyve/contract-lib";
 import { GQLEdgeTransactionInterface } from "ardb/lib/faces/gql";
+import { untilMined } from "./helper";
 
 export const APP_NAME = "KYVE - DEV";
 
@@ -72,37 +73,32 @@ export default class KYVE {
     }
 
     const address = await this.arweave.wallets.getAddress(this.keyfile);
+
+    // check if validator has enough stake
+    const currentStake = state.pools[this.poolID].vault[address];
+    const diff = this.stake - currentStake;
+
+    // todo handle case if desired stake is smaller than current stake
+    if (diff > 0) {
+      const id = await this.contract.lock(this.poolID, diff);
+      console.log(
+        `Staking ${diff} $KYVE in pool ${this.poolID}.\n Transaction: ${id}`
+      );
+      await untilMined(id, this.arweave);
+      console.log("Successfully staked tokens");
+    }
+
     if (address === this.pool.uploader) {
       console.log("\nRunning as an uploader ...");
       this.uploader();
     } else {
-      // check if validator has enough stake
-      const currentStake = state.pools[this.poolID].vault[address];
-      const diff = this.stake - currentStake;
-
-      // todo handle case if desired stake is smaller than current stake
-      if (diff > 0) {
-        const id = await this.contract.lock(this.poolID, diff);
-        // todo await transaction to be complete
-      }
-
       // register validator
       const id = await this.contract.register(this.poolID);
-
-      let status = (await this.arweave.transactions.getStatus(id)).status;
-
-      while (status !== 200) {
-        await sleep(30000);
-
-        status = (await this.arweave.transactions.getStatus(id)).status;
-
-        if (status === 200 || status === 202) {
-          // mined / pending
-          console.log("\nWaiting for registration to be mined.");
-        } else {
-          throw Error(`Registration for pool with id ${this.poolID} failed.`);
-        }
-      }
+      console.log(
+        `Registering in pool ${this.poolID} as validator.\n Transaction: ${id}`
+      );
+      await untilMined(id, this.arweave);
+      console.log("Successfully registered");
 
       console.log("\nRunning as a validator ...");
       this.validator();
@@ -238,8 +234,4 @@ export const getData = async (id: string) => {
   });
 
   return res.toString();
-};
-
-const sleep = async (ms: number) => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 };

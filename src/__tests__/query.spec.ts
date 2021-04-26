@@ -35,4 +35,4 @@ describe("Test query", () => {
     const data = await next(true);
     expect(data.length).to.equal(limit);
   }).timeout(60 * 1000);
-})
+});
