@@ -9,7 +9,7 @@ import {
 } from "./faces";
 import { JWKInterface } from "arweave/node/lib/wallet";
 import { Observable } from "rxjs";
-import { arweaveBundles as bundles, arweaveClient } from "./extensions";
+import { arweaveClient } from "./extensions";
 
 import Contract from "@kyve/contract-lib";
 import { GQLEdgeTransactionInterface } from "ardb/lib/faces/gql";
@@ -24,7 +24,6 @@ export default class KYVE {
 
   public uploadFunc: UploadFunction;
   public validateFunc: ValidateFunction;
-  private buffer: UploadFunctionReturn[] = [];
 
   // TODO: Write interface for contract.
   // TODO: Refetch!!!
@@ -156,54 +155,36 @@ export default class KYVE {
     );
 
     node.subscribe((data) => {
-      this.buffer.push(data);
-      this.bundleAndUpload();
+      this.pushToArweave(data);
     });
   }
 
-  private async bundleAndUpload() {
-    const bundleSize = this.pool.bundleSize;
-    console.log(`\nBuffer size is now: ${this.buffer.length}`);
-    if (this.buffer.length >= bundleSize) {
-      const buffer = this.buffer;
-      this.buffer = [];
+  private async pushToArweave(input: UploadFunctionReturn) {
+    const transaction = await this.arweave.createTransaction(
+      {
+        data: JSON.stringify(input.data),
+      },
+      this.keyfile
+    );
 
-      const items = [];
-      for (const entry of buffer) {
-        const item = await bundles.createData(
-          {
-            data: JSON.stringify(entry.data),
-            tags: [
-              { name: "Application", value: APP_NAME },
-              { name: "Pool", value: this.poolID.toString() },
-              { name: "Architecture", value: this.pool.architecture },
-              ...(entry.tags || []),
-            ],
-          },
-          this.keyfile
-        );
-        items.push(await bundles.sign(item, this.keyfile));
-      }
-
-      const bundle = await bundles.bundleData(items);
-      const tx = await this.arweave.createTransaction(
-        { data: JSON.stringify(bundle) },
-        this.keyfile
-      );
-
-      tx.addTag("Bundle-Format", "json");
-      tx.addTag("Bundle-Version", "1.0.0");
-      tx.addTag("Content-Type", "application/json");
-
-      await this.arweave.transactions.sign(tx, this.keyfile);
-      await this.arweave.transactions.post(tx);
-
-      console.log(
-        `\nSent a bundle with ${items.length} items\n  txID = ${
-          tx.id
-        }\n  cost = ${this.arweave.ar.winstonToAr(tx.reward)} AR`
-      );
+    const tags = [
+      { name: "Application", value: APP_NAME },
+      { name: "Pool", value: this.poolID.toString() },
+      { name: "Architecture", value: this.pool.architecture },
+      ...(input.tags || []),
+    ];
+    for (const { name, value } of tags) {
+      transaction.addTag(name, value);
     }
+
+    await this.arweave.transactions.sign(transaction, this.keyfile);
+    await this.arweave.transactions.post(transaction);
+
+    console.log(
+      `\nSent a transaction\n  txID = ${
+        transaction.id
+      }\n  cost = ${this.arweave.ar.winstonToAr(transaction.reward)} AR`
+    );
   }
 
   private validator() {
