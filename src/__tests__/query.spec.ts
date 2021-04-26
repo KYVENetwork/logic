@@ -13,26 +13,26 @@ describe("Test query", () => {
 
     const ids = await query(0, limit);
     expect(ids.length).to.equal(limit);
-  });
+  }).timeout(60 * 1000);
 
   it("Loads next data", async () => {
     const limit = 10;
 
     const ids = await next();
     expect(ids.length).to.equal(limit);
-  });
+  }).timeout(60 * 1000);
 
   it("Derefs data", async () => {
     const limit = 10;
 
     const data = await query(0, limit, true);
     expect(data.length).to.equal(limit);
-  });
+  }).timeout(60 * 1000);
 
   it("Derefs next data", async () => {
     const limit = 10;
 
     const data = await next(true);
     expect(data.length).to.equal(limit);
-  });
-}).timeout(60 * 1000);
+  }).timeout(60 * 1000);
+})

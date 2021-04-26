@@ -209,10 +209,10 @@
   resolved "https://registry.yarnpkg.com/@istanbuljs/schema/-/schema-0.1.3.tgz#e45e384e4b8ec16bce2fd903af78450f6bf7ec98"
   integrity sha512-ZXRY4jNvVgSVQ8DL3LTcakaAtXwTVUxE81hslsyD2AtoXW/wVob10HkOJ1X/pAlcI7D+2YoZKg5do8G/w6RYgA==
 
-"@kyve/contract-lib@^0.1.0-alpha.2":
-  version "0.1.0-alpha.2"
-  resolved "https://registry.yarnpkg.com/@kyve/contract-lib/-/contract-lib-0.1.0-alpha.2.tgz#36b9dd2a40e8a9f6f0d2a6373307718aa69349ab"
-  integrity sha512-rLeMcjRoHzYD/eolCskKkuSGJkFvEdiDVrbTT9vBhgbBak4kCfhjWxgAs9McVZBKEA1uvEcDml6TLmapP3gjiA==
+"@kyve/contract-lib@^0.1.0-alpha.4":
+  version "0.1.0-alpha.4"
+  resolved "https://registry.yarnpkg.com/@kyve/contract-lib/-/contract-lib-0.1.0-alpha.4.tgz#418634b4a450e0119da8cb2c7cf218ae543fa288"
+  integrity sha512-kpgF029KyEVIPCwlOdHfReTrEEskFNsrv0cVRkKepMUomnHFpVrdZS0RJi027ZXUyBaRK/FLlN7ptptWqLAXMg==
   dependencies:
     "@kyve/contract" "^0.1.0-alpha.1"
     arweave "^1.10.13"

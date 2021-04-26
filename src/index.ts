@@ -8,11 +8,11 @@ import {
   ValidateFunctionReturn,
 } from "./faces";
 import { JWKInterface } from "arweave/node/lib/wallet";
-import { readContract } from "smartweave";
 import { Observable } from "rxjs";
 import { arweaveBundles as bundles, arweaveClient } from "./extensions";
 
 import Contract from "@kyve/contract-lib";
+import { GQLEdgeTransactionInterface } from "ardb/lib/faces/gql";
 
 export const APP_NAME = "KYVE - DEV";
 
@@ -59,7 +59,7 @@ export default class KYVE {
   }
 
   public async run() {
-    const state = await readContract(this.arweave, this.contract.ID);
+    const state = await this.contract.getState();
     if (this.poolID >= 0 && this.poolID < state.pools.length) {
       this.pool = state.pools[this.poolID];
       console.log(
@@ -123,7 +123,7 @@ export default class KYVE {
         console.log(`\n[listener] height = ${height}, latest = ${latest}.`);
 
         if (latest !== height) {
-          const res = await this.ardb
+          const res = (await this.ardb
             .search()
             .min(latest)
             .max(height)
@@ -131,12 +131,10 @@ export default class KYVE {
             .tag("Application", APP_NAME)
             .tag("Pool", this.poolID.toString())
             .tag("Architecture", this.pool.architecture)
-            .findAll();
+            .findAll()) as GQLEdgeTransactionInterface[];
 
-          // @ts-ignore
           console.log(`\n[listener] Found ${res.length} new transactions.`);
 
-          // @ts-ignore
           for (const { node } of res) {
             console.log(
               `\n[listener] Parsing transaction.\n  txID = ${node.id}`

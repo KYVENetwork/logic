@@ -104,3 +104,5 @@ const node = new KYVE(myDataFetcher, myDataValidator, { pool, jwk });
   await node.run();
 })();
 ```
+
+## Querying data
